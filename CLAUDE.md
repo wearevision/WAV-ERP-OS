@@ -81,6 +81,7 @@ Every implementation decision must align with these principles:
 - **Never bypass permissions** in the frontend
 - **Frontend reflects backend state**: UI adapts to what the user is allowed to see/do
 - **No business logic in the frontend**: Validation and rules live in the database
+- **Business rules and permissions live in the database**: UI-level validation is allowed for UX, but never trusted for security
 
 ### 3. Vertical Slice Implementation
 When implementing features:
@@ -128,7 +129,8 @@ Projects move through explicit states:
 - ❌ Store sensitive data in localStorage or cookies
 - ❌ Implement client-side-only validation for security-critical data
 - ❌ Create generic abstractions for single-use cases
-- ❌ Add comments explaining what code does (code should be self-explanatory)
+- ❌ Add comments explaining obvious code (code should be self-explanatory)
+  - ✅ Exception: Complex RLS policies, triggers, or business rules must be commented
 - ❌ Copy-paste code without understanding it
 - ❌ Commit commented-out code or console.logs to main branches
 
@@ -315,6 +317,41 @@ Before considering any work "done":
 
 ---
 
+## 🎨 Figma Contract
+
+Figma designs serve as UX intent and visual guidance, not technical specification.
+
+### What Figma Defines
+- Screen flows and navigation patterns
+- Visual design and component layout
+- User interaction patterns
+- Content hierarchy and information architecture
+
+### What Figma Does NOT Define
+- **Permissions**: Determined by RLS policies in the database
+- **Business rules**: Enforced by database constraints, triggers, and functions
+- **State transitions**: Validated by backend logic
+- **Data validation**: Handled by Zod schemas and database constraints
+- **Security controls**: Implemented via Supabase RLS
+
+### Conflict Resolution
+**If a Figma flow conflicts with backend rules, backend wins.**
+
+Examples:
+- Figma shows "Edit Budget" button → Backend RLS denies Finance role → Button is hidden/disabled in UI
+- Figma shows linear workflow → Backend allows non-linear state transitions → UI adapts to backend reality
+- Figma shows all project data → User has limited permissions → UI displays only permitted data
+
+### Implementation Guidelines
+1. Start with backend (schema, RLS, business rules)
+2. Reference Figma for UX patterns and visual design
+3. Adapt UI to reflect actual user permissions and data access
+4. Never implement Figma flows that bypass backend security
+
+**Remember:** Figma is a design tool, not a security specification. Always verify permissions and business rules against the database schema and RLS policies.
+
+---
+
 ## 🗄️ Database Guidelines
 
 ### Schema Design
@@ -332,7 +369,7 @@ Before considering any work "done":
 
 ### RLS Policies
 - Name policies clearly: `{table}_{action}_{role}`
-- Document complex policy logic with comments
+- Document complex policy logic with comments (required for non-obvious business rules)
 - Test with different user roles
 - Prefer simple policies over clever ones
 
@@ -340,7 +377,8 @@ Before considering any work "done":
 - Use PostgreSQL functions for complex business logic
 - Create triggers for audit trails
 - Keep functions focused and single-purpose
-- Document parameters and return types
+- Document parameters and return types with SQL comments
+- Add inline comments for complex business logic
 
 ---
 
